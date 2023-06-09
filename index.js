@@ -25,11 +25,33 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const usersCollection = client.db("summerdb").collection("users");
     const classCollection = client.db("summerdb").collection("classes");
-    const instructorCollection = client
-      .db("summerdb")
-      .collection("instructors");
+    const instructorCollection = client.db("summerdb").collection("instructors");
     const classCartCollection = client.db("summerdb").collection("classCart");
+
+// all users collection
+app.post('/users', async(req, res)=> {
+  const user = req.body;
+  const query= {email: user.email}
+  const existingUser = await usersCollection.findOne(query)
+  console.log("existing user", existingUser)
+  if(existingUser){
+    return res.send({message: "user already exists"})
+  }
+  const result = await usersCollection.insertOne(user);
+  res.send(result)
+})
+
+app.get('/users', async(req, res)=> {
+  const result =  await usersCollection.find().toArray()
+  res.send(result)
+})
+
+
+
+
+
 
     // first get route for popular classes . called from popular class component
     app.get("/classes", async (req, res) => {

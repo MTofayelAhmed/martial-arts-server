@@ -81,6 +81,52 @@ app.post('/jwt', (req, res)=> {
       res.send(result);
     });
 
+    // check user whether it is a admin
+    app.get('/users/admin/:email', verifyJWT,  async(req, res)=> {
+      const email = req.params.email;
+      if(req.decoded.email !== email){
+        res.send({admin: false})
+      }
+      else{
+        const query= {email: email}
+      const user = await usersCollection.findOne(query)
+      const result = { admin: user?.role === "admin"}
+      res.send(result)
+
+      }
+      
+    })
+    // check user whether it is a instructor
+
+    app.get('/users/instructor/:email', verifyJWT,  async(req, res)=> {
+      const email = req.params.email;
+      if(req.decoded.email !== email){
+        res.send({instructor: false})
+      }
+      else{
+        const query= {email: email}
+        const user = await usersCollection.findOne(query)
+        const result = { instructor: user?.role === "instructor"}
+        res.send(result)
+      }
+    
+    })
+
+    app.get('/users/student/:email', verifyJWT,  async(req, res)=> {
+      const email = req.params.email;
+      if(req.decoded.email !== email){
+        res.send({student: false})
+      }
+      else{
+        const query= {email: email}
+        const user = await usersCollection.findOne(query)
+        const result = { student: user?.role === "student"}
+        res.send(result)
+      }
+     
+    })
+
+
 
 
     // update users status (make admin )
@@ -97,6 +143,8 @@ app.post('/jwt', (req, res)=> {
       const result = await usersCollection.updateOne(filter, updateDoc)
       res.send(result)
     })
+
+
     // update user status( make instructors)
 
     app.patch('/users/instructor/:id', async(req, res)=> {
@@ -204,6 +252,7 @@ app.patch('/classes/deny/:id', async(req, res)=> {
       if (!email) {
         res.send([]);
       }
+
 const decodedEmail = req.decoded.email;
 if(email !== decodedEmail){
   return res.status(401).send({error: true, message: "unauthorized access"})

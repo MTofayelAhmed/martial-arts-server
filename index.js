@@ -3,6 +3,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const stripe = require('stripe')('sk_test_51NID9aIDiJHAvHqU6XHTMdivOfS556riOseGzMD9dHOrNLqrN4q4tf1as2wLV0tos08zY8QacqQhhJTLApgPJ4Xv00mcOtwRgJ')
+
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
@@ -287,6 +289,26 @@ async function run() {
       const result = await classCartCollection.deleteOne(query);
       res.send(result);
     });
+
+
+    // payment method intent
+    app.post('/create-payment-intent', verifyJWT, async(req, res) => {
+      const {price}= req.body
+      // console.log(price)
+      // const priceNumber = Number(price);
+      // if (isNaN(priceNumber)) {
+      //   return res.status(400).json({ error: 'Invalid price value' });
+      // }
+      const amount = price*100;
+      const paymentIntent= await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card']})
+        res.send({
+          clientSecret: paymentIntent.client_secret
+        })
+
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

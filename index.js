@@ -64,6 +64,29 @@ async function run() {
       }
       next();
     };
+    // verifyJWT before using verifyInstructor 
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "instructor") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
+    const verifyStudent = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== "student") {
+        return res
+          .status(403)
+          .send({ error: true, message: "forbidden message" });
+      }
+      next();
+    };
 
     // JWT related issue
     app.post("/jwt", (req, res) => {
@@ -116,6 +139,7 @@ async function run() {
         res.send(result);
       }
     });
+    // check user whether it is a student
 
     app.get("/users/student/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -158,13 +182,13 @@ async function run() {
     });
 
     // post classes data from add a class component
-    app.post("/classes", async (req, res) => {
+    app.post("/classes", verifyJWT, verifyInstructor,  async (req, res) => {
       const classInfo = req.body;
       const result = await classCollection.insertOne(classInfo);
       res.send(result);
     });
     //(Home Page get for popular classes) first all classes based on  . called from popular class component
-    app.get("/classes", async (req, res) => {
+    app.get("/classes",  async (req, res) => {
       const query = {};
       const options = {
         sort: { availableSeats: -1 },
@@ -173,8 +197,15 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/classes/admin", verifyJWT, verifyAdmin,  async (req, res) => {
+      const query = {};
+     
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // get classes based on specific instructor email
-    app.get("/instructorClasses", async (req, res) => {
+    app.get("/instructorClasses", verifyJWT, verifyInstructor,  async (req, res) => {
       const email = req.query.email;
 
       console.log(email);
@@ -233,7 +264,7 @@ async function run() {
     });
 
     // get the selected course from classCart collection for individual student
-    app.get("/carts", verifyJWT, async (req, res) => {
+    app.get("/carts", verifyJWT, verifyStudent,   async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);

@@ -3,7 +3,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-const stripe = require('stripe')('sk_test_51NID9aIDiJHAvHqU6XHTMdivOfS556riOseGzMD9dHOrNLqrN4q4tf1as2wLV0tos08zY8QacqQhhJTLApgPJ4Xv00mcOtwRgJ')
+const stripe = require("stripe")(
+  "sk_test_51NID9aIDiJHAvHqU6XHTMdivOfS556riOseGzMD9dHOrNLqrN4q4tf1as2wLV0tos08zY8QacqQhhJTLApgPJ4Xv00mcOtwRgJ"
+);
 
 const port = process.env.PORT || 5000;
 require("dotenv").config();
@@ -53,6 +55,7 @@ async function run() {
       .db("summerdb")
       .collection("instructors");
     const classCartCollection = client.db("summerdb").collection("classCart");
+    const paymentCollection = client.db("summerdb").collection("payments");
 
     // use verifyJWT before using admin
     const verifyAdmin = async (req, res, next) => {
@@ -66,7 +69,7 @@ async function run() {
       }
       next();
     };
-    // verifyJWT before using verifyInstructor 
+    // verifyJWT before using verifyInstructor
     const verifyInstructor = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
@@ -106,14 +109,14 @@ async function run() {
       if (existingUser) {
         return res.send({ message: "user already exists" });
       }
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
+      const insertResult = await usersCollection.insertOne(user);
+      res.send(insertResult);
     });
 
     // get users to show at admin dashboard (manage users)
     app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
-      const result = await usersCollection.find().toArray();
-      res.send(result);
+      const insertResult = await usersCollection.find().toArray();
+      res.send(insertResult);
     });
 
     // check user whether it is a admin
@@ -124,8 +127,8 @@ async function run() {
       } else {
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-        const result = { admin: user?.role === "admin" };
-        res.send(result);
+        const insertResult = { admin: user?.role === "admin" };
+        res.send(insertResult);
       }
     });
     // check user whether it is a instructor
@@ -137,8 +140,8 @@ async function run() {
       } else {
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-        const result = { instructor: user?.role === "instructor" };
-        res.send(result);
+        const insertResult = { instructor: user?.role === "instructor" };
+        res.send(insertResult);
       }
     });
     // check user whether it is a student
@@ -150,8 +153,8 @@ async function run() {
       } else {
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-        const result = { student: user?.role === "student" };
-        res.send(result);
+        const insertResult = { student: user?.role === "student" };
+        res.send(insertResult);
       }
     });
 
@@ -165,8 +168,8 @@ async function run() {
           role: "admin",
         },
       };
-      const result = await usersCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const insertResult = await usersCollection.updateOne(filter, updateDoc);
+      res.send(insertResult);
     });
 
     // update user status( make instructors)
@@ -179,45 +182,50 @@ async function run() {
           role: "instructor",
         },
       };
-      const result = await usersCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const insertResult = await usersCollection.updateOne(filter, updateDoc);
+      res.send(insertResult);
     });
 
     // post classes data from add a class component
-    app.post("/classes", verifyJWT, verifyInstructor,  async (req, res) => {
+    app.post("/classes", verifyJWT, verifyInstructor, async (req, res) => {
       const classInfo = req.body;
-      const result = await classCollection.insertOne(classInfo);
-      res.send(result);
+      const insertResult = await classCollection.insertOne(classInfo);
+      res.send(insertResult);
     });
     //(Home Page get for popular classes) first all classes based on  . called from popular class component
-    app.get("/classes",  async (req, res) => {
+    app.get("/classes", async (req, res) => {
       const query = {};
       const options = {
         sort: { availableSeats: -1 },
       };
-      const result = await classCollection.find(query, options).toArray();
-      res.send(result);
+      const insertResult = await classCollection.find(query, options).toArray();
+      res.send(insertResult);
     });
 
-    app.get("/classes/admin", verifyJWT, verifyAdmin,  async (req, res) => {
+    app.get("/classes/admin", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
-     
-      const result = await classCollection.find(query).toArray();
-      res.send(result);
+
+      const insertResult = await classCollection.find(query).toArray();
+      res.send(insertResult);
     });
 
     // get classes based on specific instructor email
-    app.get("/instructorClasses", verifyJWT, verifyInstructor,  async (req, res) => {
-      const email = req.query.email;
+    app.get(
+      "/instructorClasses",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const email = req.query.email;
 
-      console.log(email);
-      if (!email) {
-        res.send([]);
+        console.log(email);
+        if (!email) {
+          res.send([]);
+        }
+        const query = { email: email };
+        const insertResult = await classCollection.find(query).toArray();
+        res.send(insertResult);
       }
-      const query = { email: email };
-      const result = await classCollection.find(query).toArray();
-      res.send(result);
-    });
+    );
 
     // (admin dashBoard) update class status(approved)
     app.patch("/classes/approve/:id", async (req, res) => {
@@ -229,8 +237,8 @@ async function run() {
           status: "approved",
         },
       };
-      const result = await classCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const insertResult = await classCollection.updateOne(filter, updateDoc);
+      res.send(insertResult);
     });
     //(admin dashboard) update class status  denied
     app.patch("/classes/deny/:id", async (req, res) => {
@@ -241,19 +249,19 @@ async function run() {
           status: "denied",
         },
       };
-      const result = await classCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const insertResult = await classCollection.updateOne(filter, updateDoc);
+      res.send(insertResult);
     });
 
     // all instructors get  routes for AllInsTructors component(no JWT TOKEN verify)
     app.get("/instructors", async (req, res) => {
       const query = {};
-      const result = await instructorCollection.find(query).toArray();
-      res.send(result);
+      const insertResult = await instructorCollection.find(query).toArray();
+      res.send(insertResult);
     });
 
     // select class button  Route for saving(posting) selected course in classCart collection
-    app.post("/carts", async (req, res) => {
+    app.post("/carts", verifyJWT, verifyStudent, async (req, res) => {
       const item = req.body;
       const id = item.classId;
       const query = { classId: id };
@@ -261,12 +269,12 @@ async function run() {
       if (existingClass) {
         return res.send({ message: "you have already selected the class" });
       }
-      const result = await classCartCollection.insertOne(item);
-      res.send(result);
+      const insertResult = await classCartCollection.insertOne(item);
+      res.send(insertResult);
     });
 
     // get the selected course from classCart collection for individual student
-    app.get("/carts", verifyJWT, verifyStudent,   async (req, res) => {
+    app.get("/carts", verifyJWT, verifyStudent, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         res.send([]);
@@ -279,36 +287,48 @@ async function run() {
           .send({ error: true, message: "unauthorized access" });
       }
       const query = { email: email };
-      const result = await classCartCollection.find(query).toArray();
-      res.send(result);
+      const insertResult = await classCartCollection.find(query).toArray();
+      res.send(insertResult);
     });
 
     app.delete("/carts/:id", verifyJWT, verifyStudent, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await classCartCollection.deleteOne(query);
-      res.send(result);
+      const insertResult = await classCartCollection.deleteOne(query);
+      res.send(insertResult);
     });
 
-
     // payment method intent
-    app.post('/create-payment-intent', verifyJWT, async(req, res) => {
-      const {price}= req.body
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+      const { price } = req.body;
       // console.log(price)
       // const priceNumber = Number(price);
       // if (isNaN(priceNumber)) {
       //   return res.status(400).json({ error: 'Invalid price value' });
       // }
-      const amount = price*100;
-      const paymentIntent= await stripe.paymentIntents.create({
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
-        payment_method_types: ['card']})
-        res.send({
-          clientSecret: paymentIntent.client_secret
-        })
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
 
-    })
+    // payment api
+
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+     
+      const classId = payment.classId;
+      const query = { classId: classId };
+      const deleteResult = await classCartCollection.deleteMany(query);
+
+      res.send({insertResult , deleteResult});
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

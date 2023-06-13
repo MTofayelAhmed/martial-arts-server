@@ -192,6 +192,7 @@ async function run() {
       const insertResult = await classCollection.insertOne(classInfo);
       res.send(insertResult);
     });
+
     //(Home Page get for popular classes) first all classes based on  . called from popular class component
     app.get("/classes", async (req, res) => {
       const query = {};
@@ -299,13 +300,18 @@ async function run() {
     });
 
     // payment method intent
+
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
-      const { price } = req.body;
-      // console.log(price)
-      // const priceNumber = Number(price);
-      // if (isNaN(priceNumber)) {
-      //   return res.status(400).json({ error: 'Invalid price value' });
-      // }
+      const { price, courseId } = req.body;
+
+      // Check if the user has already made a payment for the course
+      const existingPayment = await paymentCollection.findOne({ courseId });
+      if (existingPayment) {
+        return res
+          .status(400)
+          .json({ error: "Payment already made for this course" });
+      }
+
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -319,25 +325,18 @@ async function run() {
 
     // payment api
 
-    app.post("/payments", verifyJWT, async (req, res) => {
+    app.post("/payments", verifyJWT, verifyStudent, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
-     
+
       const classId = payment.classId;
       const query = { classId: classId };
       const deleteResult = await classCartCollection.deleteMany(query);
 
       res.send({insertResult , deleteResult});
     });
+ 
 
-    app.get('/enrolled', async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const result = await paymentCollection.find(query).sort({ paymentDate: -1 }).toArray();
-      res.send(result);
-    });
-    
-    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });

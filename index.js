@@ -192,7 +192,6 @@ async function run() {
       const insertResult = await classCollection.insertOne(classInfo);
       res.send(insertResult);
     });
-
     //(Home Page get for popular classes) first all classes based on  . called from popular class component
     app.get("/classes", async (req, res) => {
       const query = {};
@@ -266,9 +265,11 @@ async function run() {
       const item = req.body;
       const id = item.classId;
       const query = { classId: id };
-      const existingClass = await classCartCollection.findOne(query);
+      const existingClass = await paymentCollection.findOne(query);
       if (existingClass) {
-        return res.send({ message: "you have already selected the class" });
+        return res.send({
+          message: "you have already selected and made payment for the class",
+        });
       }
       const insertResult = await classCartCollection.insertOne(item);
       res.send(insertResult);
@@ -300,18 +301,10 @@ async function run() {
     });
 
     // payment method intent
-
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
-      const { price, courseId } = req.body;
-
-      // Check if the user has already made a payment for the course
-      const existingPayment = await paymentCollection.findOne({ courseId });
-      if (existingPayment) {
-        return res
-          .status(400)
-          .json({ error: "Payment already made for this course" });
-      }
-
+      const item = req.body;
+      const price = item.price;
+      
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -325,7 +318,7 @@ async function run() {
 
     // payment api
 
-    app.post("/payments", verifyJWT, verifyStudent, async (req, res) => {
+    app.post("/payments", verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
 
@@ -333,10 +326,18 @@ async function run() {
       const query = { classId: classId };
       const deleteResult = await classCartCollection.deleteMany(query);
 
-      res.send({insertResult , deleteResult});
+      res.send({ insertResult, deleteResult });
     });
- 
 
+    app.get("/enrolled", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await paymentCollection
+        .find(query)
+        .sort({ date: -1 })
+        .toArray();
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
